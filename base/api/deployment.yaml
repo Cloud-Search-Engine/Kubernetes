@@ -1,0 +1,90 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: cloudsearch-api
+  labels:
+    app.kubernetes.io/name: cloudsearch-api
+    app.kubernetes.io/component: api
+    app.kubernetes.io/part-of: cloudsearch
+spec:
+  replicas: 2
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: cloudsearch-api
+  template:
+    metadata:
+      labels:
+        app.kubernetes.io/name: cloudsearch-api
+        app.kubernetes.io/component: api
+        app.kubernetes.io/part-of: cloudsearch
+    spec:
+      serviceAccountName: cloudsearch-api
+      containers:
+        - name: api
+          image: ghcr.io/kundanmergu/cloudsearch-api:latest
+          imagePullPolicy: IfNotPresent
+          ports:
+            - name: http
+              containerPort: 8080
+              protocol: TCP
+          envFrom:
+            - configMapRef:
+                name: cloudsearch-config
+          env:
+            - name: DATABASE_URL
+              valueFrom:
+                secretKeyRef:
+                  name: cloudsearch-secrets
+                  key: DATABASE_URL
+            - name: REDIS_URL
+              valueFrom:
+                secretKeyRef:
+                  name: cloudsearch-secrets
+                  key: REDIS_URL
+                  optional: true
+          readinessProbe:
+            httpGet:
+              path: /healthz
+              port: http
+            initialDelaySeconds: 5
+            periodSeconds: 10
+            timeoutSeconds: 3
+            failureThreshold: 3
+          livenessProbe:
+            httpGet:
+              path: /healthz
+              port: http
+            initialDelaySeconds: 15
+            periodSeconds: 20
+            timeoutSeconds: 3
+            failureThreshold: 3
+          resources:
+            requests:
+              cpu: 100m
+              memory: 128Mi
+            limits:
+              cpu: 500m
+              memory: 512Mi
+          securityContext:
+            allowPrivilegeEscalation: false
+            readOnlyRootFilesystem: true
+            runAsNonRoot: true
+            runAsUser: 1000
+            capabilities:
+              drop:
+                - ALL
+      securityContext:
+        fsGroup: 1000
+        seccompProfile:
+          type: RuntimeDefault
+---
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: cloudsearch-api
+  labels:
+    app.kubernetes.io/name: cloudsearch-api
+    app.kubernetes.io/part-of: cloudsearch
+  # Patch with IRSA after Terraform apply:
+  # annotations:
+  #   eks.amazonaws.com/role-arn: <api_irsa_role_arn>

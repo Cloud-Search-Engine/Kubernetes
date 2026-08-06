@@ -1,0 +1,16 @@
+# OS / editor
+.DS_Store
+.idea/
+.vscode/
+*.swp
+
+# Local kube / secrets (never commit real secrets)
+*.pem
+secrets/*.yaml
+!secrets/*.example.yaml
+.env
+.env.*
+
+# Kustomize build output
+/out/
+*.rendered.yaml

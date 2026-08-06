@@ -1,0 +1,33 @@
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+
+resources:
+  - ../../base
+  - configmap.yaml
+  - ingress.yaml
+
+patches:
+  - path: patches/api-deployment.yaml
+  - path: patches/ingestion-deployment.yaml
+  - path: patches/frontend-deployment.yaml
+  - path: patches/api-hpa.yaml
+  - path: patches/ingestion-hpa.yaml
+  - path: patches/frontend-hpa.yaml
+
+images:
+  - name: ghcr.io/kundanmergu/cloudsearch-api
+    newTag: latest
+  - name: ghcr.io/kundanmergu/cloudsearch-ingestion
+    newTag: latest
+  - name: ghcr.io/kundanmergu/cloudsearch-frontend
+    newTag: latest
+
+# Secrets and IRSA role ARNs are environment-specific. Example:
+# kubectl -n cloudsearch create secret generic cloudsearch-secrets \
+#   --from-literal=DATABASE_URL='postgres://...' \
+#   --from-literal=REDIS_URL='rediss://...' \
+#   --from-literal=SQS_QUEUE_URL='https://sqs.us-east-1.amazonaws.com/...' \
+#   --from-literal=S3_BUCKET='cloudsearch-docs-prod'
+#
+# Patch ServiceAccount annotations with IRSA role ARNs from Terraform outputs:
+#   eks.amazonaws.com/role-arn: <api_irsa_role_arn | ingestion_irsa_role_arn>

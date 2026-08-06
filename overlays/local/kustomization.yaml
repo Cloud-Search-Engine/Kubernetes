@@ -1,0 +1,29 @@
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+
+resources:
+  - ../../base
+  - configmap.yaml
+
+patches:
+  - path: patches/api-deployment.yaml
+  - path: patches/ingestion-deployment.yaml
+  - path: patches/frontend-deployment.yaml
+  - path: patches/api-hpa.yaml
+  - path: patches/ingestion-hpa.yaml
+  - path: patches/frontend-hpa.yaml
+
+images:
+  - name: ghcr.io/kundanmergu/cloudsearch-api
+    newTag: local
+  - name: ghcr.io/kundanmergu/cloudsearch-ingestion
+    newTag: local
+  - name: ghcr.io/kundanmergu/cloudsearch-frontend
+    newTag: local
+
+# Secrets are not checked in. Create locally, e.g.:
+# kubectl -n cloudsearch create secret generic cloudsearch-secrets \
+#   --from-literal=DATABASE_URL='postgres://cloudsearch:cloudsearch@postgres:5432/cloudsearch?sslmode=disable' \
+#   --from-literal=REDIS_URL='redis://redis:6379/0' \
+#   --from-literal=SQS_QUEUE_URL='http://localstack:4566/000000000000/cloudsearch-ingestion' \
+#   --from-literal=S3_BUCKET='cloudsearch-docs-local'

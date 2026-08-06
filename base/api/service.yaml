@@ -1,0 +1,17 @@
+apiVersion: v1
+kind: Service
+metadata:
+  name: cloudsearch-api
+  labels:
+    app.kubernetes.io/name: cloudsearch-api
+    app.kubernetes.io/component: api
+    app.kubernetes.io/part-of: cloudsearch
+spec:
+  type: ClusterIP
+  selector:
+    app.kubernetes.io/name: cloudsearch-api
+  ports:
+    - name: http
+      port: 80
+      targetPort: http
+      protocol: TCP

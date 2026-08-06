@@ -1,0 +1,102 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: cloudsearch-ingestion
+  labels:
+    app.kubernetes.io/name: cloudsearch-ingestion
+    app.kubernetes.io/component: ingestion
+    app.kubernetes.io/part-of: cloudsearch
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: cloudsearch-ingestion
+  template:
+    metadata:
+      labels:
+        app.kubernetes.io/name: cloudsearch-ingestion
+        app.kubernetes.io/component: ingestion
+        app.kubernetes.io/part-of: cloudsearch
+    spec:
+      serviceAccountName: cloudsearch-ingestion
+      containers:
+        - name: ingestion
+          image: ghcr.io/kundanmergu/cloudsearch-ingestion:latest
+          imagePullPolicy: IfNotPresent
+          ports:
+            - name: health
+              containerPort: 8081
+              protocol: TCP
+          envFrom:
+            - configMapRef:
+                name: cloudsearch-config
+          env:
+            - name: DATABASE_URL
+              valueFrom:
+                secretKeyRef:
+                  name: cloudsearch-secrets
+                  key: DATABASE_URL
+            - name: REDIS_URL
+              valueFrom:
+                secretKeyRef:
+                  name: cloudsearch-secrets
+                  key: REDIS_URL
+                  optional: true
+            - name: SQS_QUEUE_URL
+              valueFrom:
+                secretKeyRef:
+                  name: cloudsearch-secrets
+                  key: SQS_QUEUE_URL
+                  optional: true
+            - name: S3_BUCKET
+              valueFrom:
+                secretKeyRef:
+                  name: cloudsearch-secrets
+                  key: S3_BUCKET
+                  optional: true
+          readinessProbe:
+            httpGet:
+              path: /healthz
+              port: health
+            initialDelaySeconds: 10
+            periodSeconds: 15
+            timeoutSeconds: 5
+            failureThreshold: 3
+          livenessProbe:
+            httpGet:
+              path: /healthz
+              port: health
+            initialDelaySeconds: 30
+            periodSeconds: 30
+            timeoutSeconds: 5
+            failureThreshold: 3
+          resources:
+            requests:
+              cpu: 100m
+              memory: 256Mi
+            limits:
+              cpu: 1000m
+              memory: 1Gi
+          securityContext:
+            allowPrivilegeEscalation: false
+            readOnlyRootFilesystem: true
+            runAsNonRoot: true
+            runAsUser: 1000
+            capabilities:
+              drop:
+                - ALL
+      securityContext:
+        fsGroup: 1000
+        seccompProfile:
+          type: RuntimeDefault
+---
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: cloudsearch-ingestion
+  labels:
+    app.kubernetes.io/name: cloudsearch-ingestion
+    app.kubernetes.io/part-of: cloudsearch
+  # Patch with IRSA after Terraform apply:
+  # annotations:
+  #   eks.amazonaws.com/role-arn: <ingestion_irsa_role_arn>
